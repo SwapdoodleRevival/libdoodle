@@ -1,1 +1,2 @@
-# [Swapdoodle file viewer](https://swapdoodlerevival.github.io/swapdoodle-utils/)
+# libdoodle
+A general-purpose library for working with Swapdoodle notes, written in Rust.
