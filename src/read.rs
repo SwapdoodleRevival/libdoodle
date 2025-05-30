@@ -59,7 +59,6 @@ pub trait BufReadSeekExt: BufRead + Seek {
         if !buf.ends_with(&[0]) {
             buf.push(0);
         }
-        dbg!(&buf);
         self.seek_relative((length - read) as i64)?;
         Ok(CString::from_vec_with_nul(buf)?)
     }
