@@ -109,10 +109,6 @@ where
                 } = head;
 
                 reader.seek(SeekFrom::Start(offset as u64))?;
-                println!(
-                    "Reading {} at offset {offset} with size {size}",
-                    name.to_string_lossy()
-                );
 
                 let data = reader.read_num_of_bytes(size as usize)?;
 
