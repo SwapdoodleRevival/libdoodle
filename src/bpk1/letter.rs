@@ -1,6 +1,11 @@
+use std::fmt::Display;
+use std::io::{self, Cursor, Seek};
+
 use serde::Serialize;
 
 use super::{BPK1Block, BPK1File, BlocksHashMap, stationery::Stationery};
+use crate::error::GenericError;
+use crate::read::{self, *};
 use crate::{color::Colors, error::GenericResult, mii_data::MiiData, read::ReadExt, sheet::Sheet};
 
 #[derive(Debug, Serialize)]
@@ -11,6 +16,7 @@ pub struct Letter {
     pub sheets: Vec<Sheet>,
     pub colors: Option<Colors>,
     pub blocks: BlocksHashMap,
+    pub common: CommonInfo,
 }
 
 impl BPK1File for Letter {
@@ -20,6 +26,7 @@ impl BPK1File for Letter {
         let mut stationery = None;
         let mut colors = None;
         let mut sheets = vec![];
+        let mut common: Option<CommonInfo> = None;
 
         for block in &blocks {
             // Apparently you can't cleanly match against CString; so I'll just use a byte string. Essentially identical
@@ -38,6 +45,9 @@ impl BPK1File for Letter {
                 b"SHEET1" => {
                     sheets.push(Sheet::from_bytes(&block.data).unwrap());
                 }
+                b"COMMON1" => {
+                    common = Some(CommonInfo::from_bytes(&block.data).unwrap())
+                }
                 _ => {}
             }
         }
@@ -49,7 +59,33 @@ impl BPK1File for Letter {
             colors,
             sheets,
             blocks: BlocksHashMap::new_from_bpk1_blocks(blocks)?,
+            common: common.expect("COMMON1 header is missing")
         })
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct CommonInfo {
+    pub sender_pid: u32,
+}
+
+impl TryFrom<&[u8]> for CommonInfo {
+    type Error = io::Error;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        let mut reader = Cursor::new(value);
+
+        reader.set_position(0x18);
+
+        Ok(CommonInfo {
+            sender_pid: reader.read_u32_le().unwrap()
+        })
+    }
+}
+
+impl CommonInfo {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, io::Error> {
+        Self::try_from(bytes)
     }
 }
 
