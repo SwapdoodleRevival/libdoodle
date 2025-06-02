@@ -1,3 +1,6 @@
+use std::error::Error;
+use std::fmt::Display;
+
 use serde::Serialize;
 
 use super::{BPK1Block, BPK1File, BlocksHashMap, stationery::Stationery};
@@ -53,10 +56,30 @@ impl BPK1File for Letter {
             colors,
             sheets,
             blocks: BlocksHashMap::new_from_bpk1_blocks(blocks)?,
-            common: common.ok_or("COMMON1 block is missing")?,
+            common: common.ok_or(LetterParsingError::MissingCommonInfoBlock)?,
         })
     }
 }
+
+#[derive(Debug, Clone, Copy)]
+pub enum LetterParsingError {
+    MissingCommonInfoBlock,
+}
+
+impl Display for LetterParsingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use LetterParsingError::*;
+        write!(
+            f,
+            "{}",
+            match self {
+                MissingCommonInfoBlock => "Missing COMMON1 block",
+            }
+        )
+    }
+}
+
+impl Error for LetterParsingError {}
 
 #[cfg(test)]
 pub mod tests {
