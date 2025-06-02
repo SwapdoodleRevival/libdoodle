@@ -83,14 +83,20 @@ impl Error for LetterParsingError {}
 
 #[cfg(test)]
 pub mod tests {
+    use std::ffi::CStr;
+    use std::ffi::CString;
     use std::fs::read;
+    use std::fs::write;
+    use std::str::FromStr;
 
     use chrono::{DateTime, Utc};
+
+    use crate::lzss;
 
     use super::*;
 
     #[test]
-    fn test_de() {
+    fn test_seri_deseri() {
         // using read instead of include_bytes so it fails at runtime if the test case isn't present instead of not compiling
         let letter =
             dbg!(Letter::new_from_bpk1_bytes(&read("test_cases/letter.bpk").unwrap()).unwrap());
@@ -100,5 +106,15 @@ pub mod tests {
         println!("Creation date: {} UTC", datetime.format("%d/%m/%Y %T"));
         println!("{}", mii.get_mii_studio_url());
         println!("{:#?}", letter.sheets);
+
+        let mut blocks: Vec<BPK1Block> = vec![];
+        for (name, block_part) in letter.blocks {
+            for block in block_part {
+                blocks.push(BPK1Block { name: CString::new(name.clone()).unwrap(), data: block });
+            }
+        }
+
+        let out = Letter::bytes_from_bpk1_blocks(blocks).unwrap();
+        write("test_cases/output.bpk", &out);
     }
 }
