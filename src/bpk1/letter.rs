@@ -1,6 +1,10 @@
+use std::error::Error;
+use std::fmt::Display;
+
 use serde::Serialize;
 
 use super::{BPK1Block, BPK1File, BlocksHashMap, stationery::Stationery};
+use crate::common_info::CommonInfo;
 use crate::{color::Colors, error::GenericResult, mii_data::MiiData, read::ReadExt, sheet::Sheet};
 
 #[derive(Debug, Serialize)]
@@ -11,6 +15,7 @@ pub struct Letter {
     pub sheets: Vec<Sheet>,
     pub colors: Option<Colors>,
     pub blocks: BlocksHashMap,
+    pub common: CommonInfo,
 }
 
 impl BPK1File for Letter {
@@ -20,6 +25,7 @@ impl BPK1File for Letter {
         let mut stationery = None;
         let mut colors = None;
         let mut sheets = vec![];
+        let mut common: Option<CommonInfo> = None;
 
         for block in &blocks {
             // Apparently you can't cleanly match against CString; so I'll just use a byte string. Essentially identical
@@ -38,6 +44,7 @@ impl BPK1File for Letter {
                 b"SHEET1" => {
                     sheets.push(Sheet::from_bytes(&block.data).unwrap());
                 }
+                b"COMMON1" => common = Some(CommonInfo::from_bytes(&block.data)?),
                 _ => {}
             }
         }
@@ -49,9 +56,30 @@ impl BPK1File for Letter {
             colors,
             sheets,
             blocks: BlocksHashMap::new_from_bpk1_blocks(blocks)?,
+            common: common.ok_or(LetterParsingError::MissingCommonInfoBlock)?,
         })
     }
 }
+
+#[derive(Debug, Clone, Copy)]
+pub enum LetterParsingError {
+    MissingCommonInfoBlock,
+}
+
+impl Display for LetterParsingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use LetterParsingError::*;
+        write!(
+            f,
+            "{}",
+            match self {
+                MissingCommonInfoBlock => "Missing COMMON1 block",
+            }
+        )
+    }
+}
+
+impl Error for LetterParsingError {}
 
 #[cfg(test)]
 pub mod tests {

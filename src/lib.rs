@@ -5,4 +5,5 @@ pub mod lzss;
 pub mod mii_data;
 pub mod sheet;
 pub mod color;
+pub mod common_info;
 pub(crate) mod read;
