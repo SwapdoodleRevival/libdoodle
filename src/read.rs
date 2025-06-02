@@ -32,6 +32,11 @@ pub trait ReadExt: Read {
     fn read_u32_le(&mut self) -> io::Result<u32> {
         Ok(u32::from_le_bytes(self.read_const_num_of_bytes()?))
     }
+
+     /// Read a little endian u64
+    fn read_u64_le(&mut self) -> io::Result<u64> {
+        Ok(u64::from_le_bytes(self.read_const_num_of_bytes()?))
+    }
 }
 
 impl<T: Read> ReadExt for T {}
