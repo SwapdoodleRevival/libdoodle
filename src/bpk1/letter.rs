@@ -46,7 +46,7 @@ impl BPK1File for Letter {
                     sheets.push(Sheet::from_bytes(&block.data).unwrap());
                 }
                 b"COMMON1" => {
-                    common = Some(CommonInfo::from_bytes(&block.data).unwrap())
+                    common = Some(CommonInfo::from_bytes(&block.data)?)
                 }
                 _ => {}
             }
@@ -59,7 +59,7 @@ impl BPK1File for Letter {
             colors,
             sheets,
             blocks: BlocksHashMap::new_from_bpk1_blocks(blocks)?,
-            common: common.expect("COMMON1 header is missing")
+            common: common.ok_or("COMMON1 header is missing")?
         })
     }
 }
@@ -78,7 +78,7 @@ impl TryFrom<&[u8]> for CommonInfo {
         reader.set_position(0x18);
 
         Ok(CommonInfo {
-            sender_pid: reader.read_u32_le().unwrap()
+            sender_pid: reader.read_u32_le()?
         })
     }
 }
