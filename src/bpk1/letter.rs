@@ -1,11 +1,7 @@
-use std::fmt::Display;
-use std::io::{self, Cursor, Seek};
-
 use serde::Serialize;
 
 use super::{BPK1Block, BPK1File, BlocksHashMap, stationery::Stationery};
-use crate::error::GenericError;
-use crate::read::{self, *};
+use crate::common_info::CommonInfo;
 use crate::{color::Colors, error::GenericResult, mii_data::MiiData, read::ReadExt, sheet::Sheet};
 
 #[derive(Debug, Serialize)]
@@ -45,9 +41,7 @@ impl BPK1File for Letter {
                 b"SHEET1" => {
                     sheets.push(Sheet::from_bytes(&block.data).unwrap());
                 }
-                b"COMMON1" => {
-                    common = Some(CommonInfo::from_bytes(&block.data)?)
-                }
+                b"COMMON1" => common = Some(CommonInfo::from_bytes(&block.data)?),
                 _ => {}
             }
         }
@@ -59,33 +53,8 @@ impl BPK1File for Letter {
             colors,
             sheets,
             blocks: BlocksHashMap::new_from_bpk1_blocks(blocks)?,
-            common: common.ok_or("COMMON1 header is missing")?
+            common: common.ok_or("COMMON1 block is missing")?,
         })
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub struct CommonInfo {
-    pub sender_pid: u32,
-}
-
-impl TryFrom<&[u8]> for CommonInfo {
-    type Error = io::Error;
-
-    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        let mut reader = Cursor::new(value);
-
-        reader.set_position(0x18);
-
-        Ok(CommonInfo {
-            sender_pid: reader.read_u32_le()?
-        })
-    }
-}
-
-impl CommonInfo {
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, io::Error> {
-        Self::try_from(bytes)
     }
 }
 
