@@ -26,7 +26,7 @@ impl TryFrom<&[u8]> for CommonInfo {
     type Error = io::Error;
 
     fn try_from(mut value: &[u8]) -> Result<Self, Self::Error> {
-        value.take(0x18);
+        value.read_const_num_of_bytes::<0x18>()?;
 
         Ok(CommonInfo {
             note_id: value.read_u64_le()?,
