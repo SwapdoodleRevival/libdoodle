@@ -1,10 +1,12 @@
 use std::io::{self, Cursor, Read, Seek};
 
-pub fn decompress_from_reader<R: Read + Seek>(reader: &mut R) -> io::Result<Vec<u8>> {
-    rust_lzss::decompress(reader)
+use crate::error::GenericResult;
+
+pub fn decompress_from_reader<R: Read + Seek>(reader: &mut R) -> GenericResult<Vec<u8>> {
+    nintendo_lz::decompress(reader)
 }
 
-pub fn decompress_from_slice(slice: &[u8]) -> io::Result<Vec<u8>> {
+pub fn decompress_from_slice(slice: &[u8]) -> GenericResult<Vec<u8>> {
     let mut cursor = Cursor::new(slice);
     decompress_from_reader(&mut cursor)
 }
