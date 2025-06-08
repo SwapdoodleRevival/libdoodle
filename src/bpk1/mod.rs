@@ -13,7 +13,7 @@ use crate::{
     error::{GenericError, GenericResult},
     lzss::decompress_from_slice,
     read::{BufReadSeekExt, ReadExt},
-    write::{WriteExt},
+    write::WriteExt,
 };
 
 pub struct BPK1Block {
@@ -192,6 +192,12 @@ fn c_str_to_bpk1_bytes(string: &CString) -> [u8; 8] {
         }
     }
     result
+}
+
+pub trait Patching where Self: Sized {
+    fn overlay_onto(&self, original_data: &[u8]) -> Vec<u8> {
+        original_data.into()
+    }
 }
 
 trait CursorTrait: BufRead + Seek {}

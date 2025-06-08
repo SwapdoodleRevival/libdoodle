@@ -55,8 +55,8 @@ impl BPK1File for Letter {
             stationery,
             colors,
             sheets,
-            blocks: BlocksHashMap::new_from_bpk1_blocks(blocks)?,
             common: common.ok_or(LetterParsingError::MissingCommonInfoBlock)?,
+            blocks: BlocksHashMap::new_from_bpk1_blocks(blocks)?,
         })
     }
 }
