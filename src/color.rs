@@ -6,7 +6,7 @@ use tsify::Tsify;
 use crate::{bits::PickBit, mii_data::name_from_bytes, read::ReadExt};
 
 #[derive(Debug, Serialize)]
-#[cfg_attr(feature = "tsify", derive(Tsify))]
+#[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi))]
 pub struct Colors {
     pub colors: Vec<Color>,
 }

@@ -57,7 +57,7 @@ impl<T: BufRead> BufReadExt for T {}
 pub trait BufReadSeekExt: BufRead + Seek {
     /// Read a string with a maximum length that might be terminated early with a null byte.
     /// Always makes sure the cursor ends up at `current + length` as if `length` bytes were always read
-    fn read_null_padded_string(&mut self, length: usize) -> GenericResult<CString> {
+    fn read_null_padded_string(&mut self, length: usize) -> GenericResult<String> {
         let mut buf = vec![];
         let read = self.read_until(0, &mut buf)?;
         // Ensure there's always a null byte
@@ -65,7 +65,7 @@ pub trait BufReadSeekExt: BufRead + Seek {
             buf.push(0);
         }
         self.seek_relative((length - read) as i64)?;
-        Ok(CString::from_vec_with_nul(buf)?)
+        Ok(CString::from_vec_with_nul(buf)?.to_string_lossy().into())
     }
 }
 
