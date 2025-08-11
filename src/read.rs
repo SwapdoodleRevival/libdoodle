@@ -39,6 +39,15 @@ pub trait ReadExt: Read {
     }
 }
 
+pub fn read_utf16_name<const N: usize>(bytes: [u8; N]) -> String {
+    let name: Vec<u16> = bytes
+        .chunks_exact(2)
+        .take_while(|b| b[0] | b[1] != 0)
+        .map(|b| u16::from_le_bytes([b[0], b[1]]))
+        .collect();
+    String::from_utf16_lossy(&name)
+}
+
 impl<T: Read> ReadExt for T {}
 
 /// An extension for [std::io::BufRead] that does the allocations for you
