@@ -5,6 +5,8 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
+
+#[cfg(feature = "tsify")]
 use tsify::Tsify;
 
 use crate::{
