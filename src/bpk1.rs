@@ -198,9 +198,9 @@ fn string_to_bpk1_bytes(string: &String) -> [u8; 8] {
 trait CursorTrait: BufRead + Seek {}
 impl<T: AsRef<[u8]>> CursorTrait for Cursor<T> {}
 
-pub type BlocksHashMap = Vec<BPK1Block>;
+pub type BPK1Blocks = Vec<BPK1Block>;
 
-impl BPK1File for BlocksHashMap {
+impl BPK1File for BPK1Blocks {
     fn new_from_bpk1_blocks(blocks: Vec<BPK1Block>) -> GenericResult<Self> {
         Ok(blocks)
     }
