@@ -20,10 +20,27 @@ use crate::{
 #[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi, from_wasm_abi))]
 pub struct BPK1Block {
     pub name: String,
-    #[cfg_attr(feature = "tsify", tsify(type = "Uint8Array"), serde(with = "serde_bytes"))]
+    #[cfg_attr(
+        feature = "tsify",
+        tsify(type = "Uint8Array"),
+        serde(with = "serde_bytes")
+    )]
     pub data: Vec<u8>,
 }
 
+/**
+ Size of the Block header, aka 0x14.
+
+ It contains, in order:
+ - 4 bytes offset within the file
+ - 4 bytes for the size of the block
+ - 4 bytes for the checksum
+ - 8 bytes for the block name
+*/
+const BPK1_BLOCK_HEADER_SIZE: u8 = 0x4 + 0x4 + 0x4 + 0x8;
+const BPK1_BLOCK_NAME_MAX_LENGTH: u32 = 7;
+
+/** The custom CRC32 algorithm used in BPK1. */
 const BPK1_CRC32_ALG: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::Algorithm {
     width: 32,
     poly: 0x04c11db7,
@@ -133,19 +150,15 @@ where
 
         writer.write(b"BPK1")?;
         writer.write_u32_le(blocks.len() as u32)?;
-        writer.write_u32_le(7)?;
+        writer.write_u32_le(BPK1_BLOCK_NAME_MAX_LENGTH)?;
 
         let file_size_pos = writer.position();
-        writer.write_u32_le(0)?;
-
-        let header_size_pos = writer.position();
-        writer.write_u32_le(0)?;
+        writer.write_u32_le(0)?; // file size
+        writer.write_u32_le(0)?; // header size
 
         writer.write(&[0; 0x2c])?; // padding
 
         let header_start_pos = writer.position();
-
-        const BLOCK_HEADER_SIZE: u8 = 0x4 + 0x4 + 0x4 + 0x8;
 
         for block in &blocks {
             writer.write_u32_le(0)?; // will be offset
@@ -156,19 +169,24 @@ where
 
         let header_size = writer.position() - header_start_pos;
 
-        writer.write_zeroes(0x10 - (header_size % 0x10) as usize)?; // padding
+        let pad = header_size % 0x10;
+        if pad != 0 {
+            writer.write_zeroes((0x10 - pad) as usize)?; // padding
+        }
 
         let data_start_pos = writer.position();
-        writer.set_position(header_size_pos);
-        writer.write_u32_le((data_start_pos - header_start_pos) as u32)?;
-        writer.set_position(data_start_pos);
 
         let mut index: u8 = 0;
         for block in &blocks {
             let start_position = writer.position();
             writer.write(&block.data)?;
-            let end_position = writer.position();
-            writer.set_position(header_start_pos + (index * BLOCK_HEADER_SIZE) as u64);
+            let mut end_position = writer.position();
+            let pad = end_position % 0x4;
+            if pad != 0 {
+                end_position += pad;
+            }
+
+            writer.set_position(header_start_pos + (index * BPK1_BLOCK_HEADER_SIZE) as u64);
             writer.write_u32_le(start_position as u32)?;
             writer.set_position(end_position);
             index += 1;
@@ -177,6 +195,7 @@ where
         let file_size = writer.position();
         writer.set_position(file_size_pos);
         writer.write_u32_le(file_size as u32)?;
+        writer.write_u32_le(data_start_pos as u32)?;
 
         Ok(result)
     }

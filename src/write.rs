@@ -7,16 +7,12 @@ use std::{
 /// An extension for [std::io::Write]
 pub trait WriteExt: Write {
     /// Read a little endian u32
-    fn write_u32_le(&mut self, value: u32) -> io::Result<()> {
-        self.write(&u32::to_le_bytes(value))?;
-        Ok(())
+    fn write_u32_le(&mut self, value: u32) -> io::Result<usize> {
+        self.write(&u32::to_le_bytes(value))
     }
 
-    fn write_zeroes(&mut self, N: usize) -> io::Result<()> {
-        for _ in 0..N {
-            self.write(&[0; 0x1]);
-        }
-        Ok(())
+    fn write_zeroes(&mut self, n: usize) -> io::Result<usize> {
+        self.write(&vec![0; n])
     }
 }
 

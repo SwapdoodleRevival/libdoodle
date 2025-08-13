@@ -47,7 +47,7 @@ impl Color {
             b: full_rgb_value(bytes[4].pick_bits(4..=7)),
             a: full_rgb_value(bytes[4].pick_bits(0..=3)),
             id: u32::from_le_bytes(bytes[0..=3].try_into().unwrap()),
-            name: read_utf16_name::<0x40>(bytes[6..=0x45].try_into().unwrap()),
+            name: read_utf16_name::<0x40>(bytes[0xc..=0x4b].try_into().unwrap()),
         }
     }
 }
