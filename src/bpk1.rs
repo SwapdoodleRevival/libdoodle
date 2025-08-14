@@ -206,16 +206,9 @@ where
 }
 
 fn cstring_to_bpk1_bytes(string: &CString) -> [u8; 8] {
-    let mut result = [0; 8];
-    let mut index: usize = 0;
-    for b in string.as_bytes() {
-        result[index] = b.clone();
-        index += 1;
-        if index == 8 {
-            break;
-        }
-    }
-    result
+    let mut bytes = [0u8; 8];
+    _ = bytes.as_mut().write(string.to_bytes());
+    bytes
 }
 
 trait CursorTrait: BufRead + Seek {}
@@ -251,7 +244,10 @@ pub mod tests {
         let file = &read("test_cases/letter.bpk").unwrap();
 
         let decompressed = lzss::decompress_from_slice(&file).unwrap();
-        write("test_cases/test-seri-deseri-decompressed.bpk", &decompressed);
+        write(
+            "test_cases/test-seri-deseri-decompressed.bpk",
+            &decompressed,
+        );
 
         let blocks = BPK1Blocks::new_from_bpk1_bytes(&decompressed).unwrap();
         let rebuilt = BPK1Blocks::bytes_from_bpk1_blocks(blocks).unwrap();
