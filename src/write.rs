@@ -1,7 +1,4 @@
-use std::{
-    io::{self, Write},
-    u32,
-};
+use std::io::{self, Write};
 
 /// An extension for [std::io::Write]
 pub trait WriteExt: Write {

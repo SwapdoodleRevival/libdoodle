@@ -9,8 +9,11 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "tsify")]
 use tsify::Tsify;
 
+#[allow(unused_imports)]
+use crate::cstring;
+
 use crate::{
-    cstring::{CString},
+    cstring::CString,
     error::GenericResult,
     lzss::decompress_from_slice,
     read::{BufReadSeekExt, ReadExt},
@@ -150,7 +153,7 @@ where
         let mut result = Vec::<u8>::new();
         let mut writer = Cursor::new(&mut result);
 
-        writer.write(b"BPK1")?;
+        writer.write_all(b"BPK1")?;
         writer.write_u32_le(blocks.len() as u32)?;
         writer.write_u32_le(BPK1_BLOCK_NAME_MAX_LENGTH)?;
 
@@ -158,7 +161,7 @@ where
         writer.write_u32_le(0)?; // file size
         writer.write_u32_le(0)?; // header size
 
-        writer.write(&[0; 0x2c])?; // padding
+        writer.write_all(&[0; 0x2c])?; // padding
 
         let header_start_pos = writer.position();
 
@@ -166,7 +169,7 @@ where
             writer.write_u32_le(0)?; // will be offset
             writer.write_u32_le(block.data.len() as u32)?;
             writer.write_u32_le(calc_bpk1_checksum(&block.data))?;
-            writer.write(&cstring_to_bpk1_bytes(&block.name))?;
+            writer.write_all(&cstring_to_bpk1_bytes(&block.name))?;
         }
 
         let header_size = writer.position() - header_start_pos;
@@ -178,10 +181,9 @@ where
 
         let data_start_pos = writer.position();
 
-        let mut index: u8 = 0;
-        for block in &blocks {
+        for (index, block) in (0_u8..).zip(blocks.iter()) {
             let start_position = writer.position();
-            writer.write(&block.data)?;
+            writer.write_all(&block.data)?;
             let mut end_position = writer.position();
             let pad = end_position % 0x4;
             if pad != 0 {
@@ -191,7 +193,6 @@ where
             writer.set_position(header_start_pos + (index * BPK1_BLOCK_HEADER_SIZE) as u64);
             writer.write_u32_le(start_position as u32)?;
             writer.set_position(end_position);
-            index += 1;
         }
 
         let file_size = writer.position();
@@ -224,15 +225,10 @@ impl BPK1File for BPK1Blocks {
 
 #[cfg(test)]
 pub mod tests {
-    
-    
+
     use std::fs::read;
     use std::fs::write;
-    
 
-    
-
-    
     use crate::lzss;
 
     use super::*;
