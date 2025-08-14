@@ -1,7 +1,12 @@
-use std::{ffi::{self}, fmt};
+use std::{
+    ffi::{self},
+    fmt,
+};
 
-use serde::{de::{self, Visitor}, Deserializer, Serializer};
-
+use serde::{
+    Deserializer, Serializer,
+    de::{self, Visitor},
+};
 
 pub type CString = ffi::CString;
 
@@ -11,7 +16,6 @@ where
 {
     serializer.serialize_str(&string.to_string_lossy())
 }
-
 
 struct CStringVisitor;
 
@@ -28,14 +32,14 @@ impl Visitor<'_> for CStringVisitor {
     {
         match CString::new(value) {
             Ok(v) => Ok(v),
-            Err(_) => Err(E::custom("a"))
+            Err(_) => Err(E::custom("a")),
         }
     }
 }
 
 pub fn deserialize<'de, D>(deserializer: D) -> Result<CString, D::Error>
 where
-    D: Deserializer<'de>
+    D: Deserializer<'de>,
 {
     deserializer.deserialize_str(CStringVisitor)
 }

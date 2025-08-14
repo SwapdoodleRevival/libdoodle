@@ -26,7 +26,10 @@ impl TryFrom<&[u8]> for CommonInfo {
     type Error = io::Error;
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        let mut value = value.get(0x18..).ok_or(io::Error::new(io::ErrorKind::UnexpectedEof, "Common1 block too short"))?;
+        let mut value = value.get(0x18..).ok_or(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "Common1 block too short",
+        ))?;
 
         Ok(CommonInfo {
             note_id: value.read_u64_le()?,

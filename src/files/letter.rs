@@ -84,17 +84,9 @@ impl Error for LetterParsingError {}
 
 #[cfg(test)]
 pub mod tests {
-    
-    
-    use std::fs::read;
-    
-    
-
-    use chrono::{DateTime, Utc};
-
-    
-
     use super::*;
+    use chrono::{DateTime, Utc};
+    use std::fs::read;
 
     #[test]
     fn test_seri_deseri() {

@@ -12,9 +12,17 @@ use tsify::Tsify;
 #[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi))]
 pub struct Stationery {
     pub name: String,
-    #[cfg_attr(feature = "tsify", tsify(type = "Uint8Array"), serde(with = "serde_bytes"))]
+    #[cfg_attr(
+        feature = "tsify",
+        tsify(type = "Uint8Array"),
+        serde(with = "serde_bytes")
+    )]
     pub background_2d: Vec<u8>,
-    #[cfg_attr(feature = "tsify", tsify(type = "Uint8Array"), serde(with = "serde_bytes"))]
+    #[cfg_attr(
+        feature = "tsify",
+        tsify(type = "Uint8Array"),
+        serde(with = "serde_bytes")
+    )]
     pub background_3d: Vec<u8>,
     pub mask: Vec<Vec<u8>>,
     pub blocks: BPK1Blocks,

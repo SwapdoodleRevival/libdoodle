@@ -1,6 +1,4 @@
-use std::{
-    io::{self, BufRead, Read, Seek},
-};
+use std::io::{self, BufRead, Read, Seek};
 
 use crate::{cstring::CString, error::GenericResult};
 
@@ -32,7 +30,7 @@ pub trait ReadExt: Read {
         Ok(u32::from_le_bytes(self.read_const_num_of_bytes()?))
     }
 
-     /// Read a little endian u64
+    /// Read a little endian u64
     fn read_u64_le(&mut self) -> io::Result<u64> {
         Ok(u64::from_le_bytes(self.read_const_num_of_bytes()?))
     }
@@ -77,7 +75,10 @@ pub trait BufReadSeekExt: BufRead + Seek {
     }
 
     fn read_null_padded_string(&mut self, length: usize) -> GenericResult<String> {
-        Ok(self.read_null_padded_cstring(length)?.to_string_lossy().into())
+        Ok(self
+            .read_null_padded_cstring(length)?
+            .to_string_lossy()
+            .into())
     }
 }
 
