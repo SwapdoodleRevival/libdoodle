@@ -53,12 +53,12 @@ impl BPK1File for Stationery {
 
         for block in &blocks {
             // Apparently you can't cleanly match against CString; so I'll just use a byte string. Essentially identical
-            match block.name.as_str() {
-                "STAHED1" => {
+            match block.name.as_bytes() {
+                b"STAHED1" => {
                     let mut cursor = Cursor::new(&block.data);
                     name = Some(cursor.read_null_padded_string(0x80)?);
                 }
-                "STBARD1" => {
+                b"STBARD1" => {
                     if background_2d.is_none() {
                         background_2d = Some(block.data.to_owned())
                     } else if background_3d.is_none() {
@@ -67,7 +67,7 @@ impl BPK1File for Stationery {
                         Err(StationeryDeserializeError::TooManyBackgrounds)?
                     }
                 }
-                "STMASK1" => mask = Some(read_mask(&block.data)),
+                b"STMASK1" => mask = Some(read_mask(&block.data)),
                 _ => {}
             }
         }

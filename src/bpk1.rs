@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use crate::{
+    cstring::{self, CString},
     error::GenericResult,
     lzss::decompress_from_slice,
     read::{BufReadSeekExt, ReadExt},
@@ -19,7 +20,8 @@ use crate::{
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi, from_wasm_abi))]
 pub struct BPK1Block {
-    pub name: String,
+    #[cfg_attr(feature = "tsify", serde(with = "cstring"))]
+    pub name: CString,
     #[cfg_attr(
         feature = "tsify",
         tsify(type = "Uint8Array"),
@@ -103,7 +105,7 @@ where
             offset: u32,
             size: u32,
             checksum: u32,
-            name: String,
+            name: CString,
         }
 
         let mut blocks = Vec::with_capacity(num_blocks as usize);
@@ -113,7 +115,7 @@ where
                 offset: reader.read_u32_le()?,
                 size: reader.read_u32_le()?,
                 checksum: reader.read_u32_le()?,
-                name: reader.read_null_padded_string(8)?,
+                name: reader.read_null_padded_cstring(8)?,
             })
         }
 
@@ -164,7 +166,7 @@ where
             writer.write_u32_le(0)?; // will be offset
             writer.write_u32_le(block.data.len() as u32)?;
             writer.write_u32_le(calc_bpk1_checksum(&block.data))?;
-            writer.write(&string_to_bpk1_bytes(&block.name))?;
+            writer.write(&cstring_to_bpk1_bytes(&block.name))?;
         }
 
         let header_size = writer.position() - header_start_pos;
@@ -203,7 +205,7 @@ where
     fn new_from_bpk1_blocks(blocks: Vec<BPK1Block>) -> GenericResult<Self>;
 }
 
-fn string_to_bpk1_bytes(string: &String) -> [u8; 8] {
+fn cstring_to_bpk1_bytes(string: &CString) -> [u8; 8] {
     let mut result = [0; 8];
     let mut index: usize = 0;
     for b in string.as_bytes() {

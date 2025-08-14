@@ -1,9 +1,8 @@
 use std::{
-    ffi::CString,
     io::{self, BufRead, Read, Seek},
 };
 
-use crate::error::GenericResult;
+use crate::{cstring::CString, error::GenericResult};
 
 /// An extension for [std::io::Read] that does the allocations for you
 pub trait ReadExt: Read {
@@ -66,7 +65,7 @@ impl<T: BufRead> BufReadExt for T {}
 pub trait BufReadSeekExt: BufRead + Seek {
     /// Read a string with a maximum length that might be terminated early with a null byte.
     /// Always makes sure the cursor ends up at `current + length` as if `length` bytes were always read
-    fn read_null_padded_string(&mut self, length: usize) -> GenericResult<String> {
+    fn read_null_padded_cstring(&mut self, length: usize) -> GenericResult<CString> {
         let mut buf = vec![];
         let read = self.read_until(0, &mut buf)?;
         // Ensure there's always a null byte
@@ -74,7 +73,11 @@ pub trait BufReadSeekExt: BufRead + Seek {
             buf.push(0);
         }
         self.seek_relative((length - read) as i64)?;
-        Ok(CString::from_vec_with_nul(buf)?.to_string_lossy().into())
+        Ok(CString::from_vec_with_nul(buf)?)
+    }
+
+    fn read_null_padded_string(&mut self, length: usize) -> GenericResult<String> {
+        Ok(self.read_null_padded_cstring(length)?.to_string_lossy().into())
     }
 }
 

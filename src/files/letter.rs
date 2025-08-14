@@ -30,22 +30,22 @@ impl BPK1File for Letter {
         let mut common: Option<CommonInfo> = None;
 
         for block in &blocks {
-            match block.name.as_str() {
-                "THUMB2" => {
+            match block.name.as_bytes() {
+                b"THUMB2" => {
                     thumbnails.push(block.data.to_owned());
                 }
-                "MIISTD1" => {
+                b"MIISTD1" => {
                     let mut slice: &[u8] = &block.data;
                     sender_mii = Some(MiiData::from_bytes(slice.read_const_num_of_bytes()?)?)
                 }
-                "COLSLT1" => {
+                b"COLSLT1" => {
                     colors = Some(Colors::from_bytes(&block.data)?);
                 }
-                "STATIN1" => stationery = Some(Stationery::new_from_bpk1_bytes(&block.data)?),
-                "SHEET1" => {
+                b"STATIN1" => stationery = Some(Stationery::new_from_bpk1_bytes(&block.data)?),
+                b"SHEET1" => {
                     sheets.push(Sheet::from_bytes(&block.data).unwrap());
                 }
-                "COMMON1" => common = Some(CommonInfo::from_bytes(&block.data)?),
+                b"COMMON1" => common = Some(CommonInfo::from_bytes(&block.data)?),
                 _ => {}
             }
         }

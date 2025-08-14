@@ -1,6 +1,5 @@
 use std::{
-    ffi::CString,
-    io::{self, BufWriter, Seek, Write},
+    io::{self, Seek, Write},
     u32,
 };
 
