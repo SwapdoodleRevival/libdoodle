@@ -1,7 +1,7 @@
 use std::{
     error::Error,
     fmt::Display,
-    io::{BufRead, Cursor, Read, Seek, SeekFrom, Write},
+    io::{BufRead, Cursor, Seek, SeekFrom, Write},
 };
 
 use serde::{Deserialize, Serialize};
@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use crate::{
-    cstring::{self, CString},
+    cstring::{CString},
     error::GenericResult,
     lzss::decompress_from_slice,
     read::{BufReadSeekExt, ReadExt},
@@ -139,7 +139,7 @@ where
                     Err(BPK1Error::ChecksumMismatched)?;
                 }
 
-                Ok(BPK1Block { name, data: data })
+                Ok(BPK1Block { name, data })
             })
             .collect::<GenericResult<Vec<BPK1Block>>>()?; // Collect into a Result<Vec> from an Iterator<Item = Result> to short circuit
 
@@ -224,15 +224,15 @@ impl BPK1File for BPK1Blocks {
 
 #[cfg(test)]
 pub mod tests {
-    use std::ffi::CStr;
-    use std::ffi::CString;
+    
+    
     use std::fs::read;
     use std::fs::write;
-    use std::str::FromStr;
+    
 
-    use chrono::{DateTime, Utc};
+    
 
-    use crate::files::letter::Letter;
+    
     use crate::lzss;
 
     use super::*;

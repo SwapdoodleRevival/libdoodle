@@ -2,7 +2,6 @@ use std::{ffi::{self}, fmt};
 
 use serde::{de::{self, Visitor}, Deserializer, Serializer};
 
-use crate::error::GenericResult;
 
 pub type CString = ffi::CString;
 

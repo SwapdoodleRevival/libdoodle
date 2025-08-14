@@ -1,4 +1,4 @@
-use std::io::{self, Cursor, Read, Seek};
+use std::io::{Cursor, Read, Seek};
 
 use crate::error::GenericResult;
 

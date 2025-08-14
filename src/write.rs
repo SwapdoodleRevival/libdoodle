@@ -1,5 +1,5 @@
 use std::{
-    io::{self, Seek, Write},
+    io::{self, Write},
     u32,
 };
 
