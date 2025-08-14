@@ -185,7 +185,7 @@ where
             let mut end_position = writer.position();
             let pad = end_position % 0x4;
             if pad != 0 {
-                end_position += pad;
+                end_position += 0x04 - pad;
             }
 
             writer.set_position(header_start_pos + (index * BPK1_BLOCK_HEADER_SIZE) as u64);
@@ -226,5 +226,39 @@ pub type BPK1Blocks = Vec<BPK1Block>;
 impl BPK1File for BPK1Blocks {
     fn new_from_bpk1_blocks(blocks: Vec<BPK1Block>) -> GenericResult<Self> {
         Ok(blocks)
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use std::ffi::CStr;
+    use std::ffi::CString;
+    use std::fs::read;
+    use std::fs::write;
+    use std::str::FromStr;
+
+    use chrono::{DateTime, Utc};
+
+    use crate::files::letter::Letter;
+    use crate::lzss;
+
+    use super::*;
+
+    #[test]
+    fn test_seri_deseri() {
+        // using read instead of include_bytes so it fails at runtime if the test case isn't present instead of not compiling
+
+        let file = &read("test_cases/letter.bpk").unwrap();
+
+        let decompressed = lzss::decompress_from_slice(&file).unwrap();
+        write("test_cases/test-seri-deseri-decompressed.bpk", &decompressed);
+
+        let blocks = BPK1Blocks::new_from_bpk1_bytes(&decompressed).unwrap();
+        let rebuilt = BPK1Blocks::bytes_from_bpk1_blocks(blocks).unwrap();
+        write("test_cases/test-seri-deseri-rebuilt.bpk", &rebuilt);
+
+        if decompressed != rebuilt {
+            panic!();
+        }
     }
 }

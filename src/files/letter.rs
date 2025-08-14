@@ -3,7 +3,7 @@ use std::fmt::Display;
 
 use serde::Serialize;
 
-use crate::blocks::{colslt1::Colors, miistd1::MiiData, sheet1::Sheet, common1::CommonInfo};
+use crate::blocks::{colslt1::Colors, common1::CommonInfo, miistd1::MiiData, sheet1::Sheet};
 use crate::bpk1::{BPK1Block, BPK1Blocks, BPK1File};
 use crate::error::GenericResult;
 use crate::files::stationery::Stationery;
@@ -99,16 +99,11 @@ pub mod tests {
     #[test]
     fn test_seri_deseri() {
         // using read instead of include_bytes so it fails at runtime if the test case isn't present instead of not compiling
-        let letter =
-            dbg!(Letter::new_from_bpk1_bytes(&read("test_cases/letter.bpk").unwrap()).unwrap());
+        let letter = Letter::new_from_bpk1_bytes(&read("test_cases/letter.bpk").unwrap()).unwrap();
         let mii = letter.sender_mii.unwrap();
         println!("Mii: {:#?}", mii);
         let datetime: DateTime<Utc> = mii.mii_creation_date.into();
         println!("Creation date: {} UTC", datetime.format("%d/%m/%Y %T"));
-        println!("{}", mii.get_mii_studio_url());
-        println!("{:#?}", letter.sheets);
-
-        let out = Letter::bytes_from_bpk1_blocks(letter.blocks).unwrap();
-        write("test_cases/output.bpk", &out);
+        println!("Mii Studio: {}", mii.get_mii_studio_url());
     }
 }
