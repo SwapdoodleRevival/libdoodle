@@ -1,14 +1,9 @@
-use std::{
-    ffi::{self},
-    fmt,
-};
+use std::{ffi::CString, fmt, str::FromStr};
 
 use serde::{
     Deserializer, Serializer,
     de::{self, Visitor},
 };
-
-pub type CString = ffi::CString;
 
 pub fn serialize<S>(string: &CString, serializer: S) -> Result<S::Ok, S::Error>
 where
@@ -22,18 +17,16 @@ struct CStringVisitor;
 impl Visitor<'_> for CStringVisitor {
     type Value = CString;
 
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a string")
+    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "a string")
     }
 
     fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
     where
         E: de::Error,
     {
-        match CString::new(value) {
-            Ok(v) => Ok(v),
-            Err(_) => Err(E::custom("a")),
-        }
+        CString::from_str(value)
+            .map_err(|_| E::invalid_value(de::Unexpected::Str("invalid CString"), &self))
     }
 }
 

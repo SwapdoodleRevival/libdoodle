@@ -1,6 +1,9 @@
-use std::io::{self, BufRead, Read, Seek};
+use std::{
+    ffi::CString,
+    io::{self, BufRead, Read, Seek},
+};
 
-use crate::{cstring::CString, error::GenericResult};
+use crate::error::GenericResult;
 
 /// An extension for [std::io::Read] that does the allocations for you
 pub trait ReadExt: Read {

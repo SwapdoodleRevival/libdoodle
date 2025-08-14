@@ -1,5 +1,6 @@
 use std::{
     error::Error,
+    ffi::CString,
     fmt::Display,
     io::{BufRead, Cursor, Seek, SeekFrom, Write},
 };
@@ -9,11 +10,10 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "tsify")]
 use tsify::Tsify;
 
-#[allow(unused_imports)]
+#[cfg(feature = "tsify")]
 use crate::cstring;
 
 use crate::{
-    cstring::CString,
     error::GenericResult,
     lzss::decompress_from_slice,
     read::{BufReadSeekExt, ReadExt},
@@ -42,7 +42,7 @@ pub struct BPK1Block {
  - 4 bytes for the checksum
  - 8 bytes for the block name
 */
-const BPK1_BLOCK_HEADER_SIZE: u8 = 0x4 + 0x4 + 0x4 + 0x8;
+const BPK1_BLOCK_HEADER_SIZE: usize = 0x4 + 0x4 + 0x4 + 0x8;
 const BPK1_BLOCK_NAME_MAX_LENGTH: u32 = 7;
 
 /** The custom CRC32 algorithm used in BPK1. */
@@ -181,7 +181,7 @@ where
 
         let data_start_pos = writer.position();
 
-        for (index, block) in (0_u8..).zip(blocks.iter()) {
+        for (index, block) in blocks.iter().enumerate() {
             let start_position = writer.position();
             writer.write_all(&block.data)?;
             let mut end_position = writer.position();
@@ -239,15 +239,16 @@ pub mod tests {
 
         let file = &read("test_cases/letter.bpk").unwrap();
 
-        let decompressed = lzss::decompress_from_slice(&file).unwrap();
+        let decompressed = lzss::decompress_from_slice(file).unwrap();
         write(
             "test_cases/test-seri-deseri-decompressed.bpk",
             &decompressed,
-        );
+        )
+        .unwrap();
 
         let blocks = BPK1Blocks::new_from_bpk1_bytes(&decompressed).unwrap();
         let rebuilt = BPK1Blocks::bytes_from_bpk1_blocks(blocks).unwrap();
-        write("test_cases/test-seri-deseri-rebuilt.bpk", &rebuilt);
+        write("test_cases/test-seri-deseri-rebuilt.bpk", &rebuilt).unwrap();
 
         if decompressed != rebuilt {
             panic!();
