@@ -1,6 +1,5 @@
-use std::io::{self};
-
 use serde::Serialize;
+use std::io;
 
 use crate::read::ReadExt;
 
