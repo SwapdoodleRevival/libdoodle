@@ -1,16 +1,31 @@
 use serde::Serialize;
 use std::{error::Error, fmt::Display, io::Cursor};
 
-use super::{BPK1Block, BPK1File, BlocksHashMap};
-use crate::{bits::PickBit, error::GenericResult, read::BufReadSeekExt};
+use crate::bits::PickBit;
+use crate::bpk1::{BPK1Block, BPK1Blocks, BPK1File};
+use crate::error::GenericResult;
+use crate::read::BufReadSeekExt;
+#[cfg(feature = "tsify")]
+use tsify::Tsify;
 
 #[derive(Debug, Serialize)]
+#[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi))]
 pub struct Stationery {
     pub name: String,
+    #[cfg_attr(
+        feature = "tsify",
+        tsify(type = "Uint8Array"),
+        serde(with = "serde_bytes")
+    )]
     pub background_2d: Vec<u8>,
+    #[cfg_attr(
+        feature = "tsify",
+        tsify(type = "Uint8Array"),
+        serde(with = "serde_bytes")
+    )]
     pub background_3d: Vec<u8>,
     pub mask: Vec<Vec<u8>>,
-    pub blocks: BlocksHashMap,
+    pub blocks: BPK1Blocks,
 }
 
 #[derive(Debug, Serialize)]
@@ -46,10 +61,10 @@ impl BPK1File for Stationery {
 
         for block in &blocks {
             // Apparently you can't cleanly match against CString; so I'll just use a byte string. Essentially identical
-            match block.name.to_bytes() {
+            match block.name.as_bytes() {
                 b"STAHED1" => {
                     let mut cursor = Cursor::new(&block.data);
-                    name = Some(cursor.read_null_padded_string(0x80)?.into_string()?);
+                    name = Some(cursor.read_null_padded_string(0x80)?);
                 }
                 b"STBARD1" => {
                     if background_2d.is_none() {
@@ -71,7 +86,7 @@ impl BPK1File for Stationery {
                 .ok_or(StationeryDeserializeError::MissingBothBackgrounds)?,
             background_3d: background_3d.ok_or(StationeryDeserializeError::Missing3DBackground)?,
             mask: mask.ok_or(StationeryDeserializeError::MissingMask)?,
-            blocks: BlocksHashMap::new_from_bpk1_blocks(blocks)?,
+            blocks: BPK1Blocks::new_from_bpk1_blocks(blocks)?,
         })
     }
 }

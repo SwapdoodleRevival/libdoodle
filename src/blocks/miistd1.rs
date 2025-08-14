@@ -4,11 +4,15 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use serde::Serialize;
+#[cfg(feature = "tsify")]
+use tsify::Tsify;
 
-use crate::bits::PickBit;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize)]
+use crate::{bits::PickBit, read::read_utf16_name};
+
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi, from_wasm_abi))]
 pub struct MiiData {
     pub copying_allowed: bool,
     pub region_lock: MiiRegionLock,
@@ -52,15 +56,6 @@ impl Display for MiiDeserializeError {
 }
 
 impl Error for MiiDeserializeError {}
-
-pub fn name_from_bytes<const N: usize>(bytes: [u8; N]) -> String {
-    let name: Vec<u16> = bytes
-        .chunks_exact(2)
-        .take_while(|b| b[0] | b[1] != 0)
-        .map(|b| u16::from_le_bytes([b[0], b[1]]))
-        .collect();
-    String::from_utf16_lossy(&name)
-}
 
 pub type MiiDataBytes = [u8; 0x5C];
 
@@ -117,7 +112,7 @@ impl TryFrom<MiiDataBytes> for MiiData {
             .try_into()
             .map_err(MiiDeserializeError::InvalidFavoriteColor)?;
         let is_favorite = mii_flags.pick_bit(14);
-        let mii_name = name_from_bytes(raw.mii_name);
+        let mii_name = read_utf16_name(raw.mii_name);
         let sharing_disabled = raw.sharing_face_shape_skin_color.pick_bit(0);
 
         let eyes = u32::from_le_bytes(raw.eyes);
@@ -187,7 +182,7 @@ impl TryFrom<MiiDataBytes> for MiiData {
             mole_position_y: mole.pick_bits(10..=14) as u8,
         };
 
-        let creator_name = name_from_bytes(raw.author_name);
+        let creator_name = read_utf16_name(raw.author_name);
 
         Ok(MiiData {
             copying_allowed,
@@ -296,7 +291,8 @@ impl MiiData {
 macro_rules! n_enum {
     ($name: ident; $($i: ident = $n: expr),*) => {
         #[repr(u8)]
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+        #[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi, from_wasm_abi))]
         pub enum $name {
             $($i = $n,)*
         }
@@ -331,7 +327,8 @@ n_enum!(
     Twn = 3
 );
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi, from_wasm_abi))]
 pub struct MiiPosition {
     pub page: u8,
     pub slot: u8,
@@ -351,7 +348,8 @@ n_enum!(
     Female = 1
 );
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi, from_wasm_abi))]
 pub struct MiiBirthday {
     pub month: chrono::Month,
     pub day: u8,
@@ -374,7 +372,8 @@ n_enum!(
 );
 
 /// Mii character features (facial features, etc)
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi, from_wasm_abi))]
 pub struct MiiFeatures {
     pub width: u8,
     pub height: u8,

@@ -3,9 +3,11 @@ use std::fmt::Display;
 
 use serde::Serialize;
 
-use super::{BPK1Block, BPK1File, BlocksHashMap, stationery::Stationery};
-use crate::common_info::CommonInfo;
-use crate::{color::Colors, error::GenericResult, mii_data::MiiData, read::ReadExt, sheet::Sheet};
+use crate::blocks::{colslt1::Colors, common1::CommonInfo, miistd1::MiiData, sheet1::Sheet};
+use crate::bpk1::{BPK1Block, BPK1Blocks, BPK1File};
+use crate::error::GenericResult;
+use crate::files::stationery::Stationery;
+use crate::read::ReadExt;
 
 #[derive(Debug, Serialize)]
 pub struct Letter {
@@ -14,7 +16,7 @@ pub struct Letter {
     pub stationery: Option<Stationery>,
     pub sheets: Vec<Sheet>,
     pub colors: Option<Colors>,
-    pub blocks: BlocksHashMap,
+    pub blocks: BPK1Blocks,
     pub common: CommonInfo,
 }
 
@@ -28,8 +30,7 @@ impl BPK1File for Letter {
         let mut common: Option<CommonInfo> = None;
 
         for block in &blocks {
-            // Apparently you can't cleanly match against CString; so I'll just use a byte string. Essentially identical
-            match block.name.to_bytes() {
+            match block.name.as_bytes() {
                 b"THUMB2" => {
                     thumbnails.push(block.data.to_owned());
                 }
@@ -55,7 +56,7 @@ impl BPK1File for Letter {
             stationery,
             colors,
             sheets,
-            blocks: BlocksHashMap::new_from_bpk1_blocks(blocks)?,
+            blocks: BPK1Blocks::new_from_bpk1_blocks(blocks)?,
             common: common.ok_or(LetterParsingError::MissingCommonInfoBlock)?,
         })
     }
@@ -83,22 +84,18 @@ impl Error for LetterParsingError {}
 
 #[cfg(test)]
 pub mod tests {
+    use super::*;
+    use chrono::{DateTime, Utc};
     use std::fs::read;
 
-    use chrono::{DateTime, Utc};
-
-    use super::*;
-
     #[test]
-    fn test_de() {
+    fn test_seri_deseri() {
         // using read instead of include_bytes so it fails at runtime if the test case isn't present instead of not compiling
-        let letter =
-            dbg!(Letter::new_from_bpk1_bytes(&read("test_cases/letter.bpk").unwrap()).unwrap());
+        let letter = Letter::new_from_bpk1_bytes(&read("test_cases/letter.bpk").unwrap()).unwrap();
         let mii = letter.sender_mii.unwrap();
         println!("Mii: {:#?}", mii);
         let datetime: DateTime<Utc> = mii.mii_creation_date.into();
         println!("Creation date: {} UTC", datetime.format("%d/%m/%Y %T"));
-        println!("{}", mii.get_mii_studio_url());
-        println!("{:#?}", letter.sheets);
+        println!("Mii Studio: {}", mii.get_mii_studio_url());
     }
 }

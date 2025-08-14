@@ -33,10 +33,19 @@ pub trait ReadExt: Read {
         Ok(u32::from_le_bytes(self.read_const_num_of_bytes()?))
     }
 
-     /// Read a little endian u64
+    /// Read a little endian u64
     fn read_u64_le(&mut self) -> io::Result<u64> {
         Ok(u64::from_le_bytes(self.read_const_num_of_bytes()?))
     }
+}
+
+pub fn read_utf16_name<const N: usize>(bytes: [u8; N]) -> String {
+    let name: Vec<u16> = bytes
+        .chunks_exact(2)
+        .take_while(|b| b[0] | b[1] != 0)
+        .map(|b| u16::from_le_bytes([b[0], b[1]]))
+        .collect();
+    String::from_utf16_lossy(&name)
 }
 
 impl<T: Read> ReadExt for T {}
@@ -57,7 +66,7 @@ impl<T: BufRead> BufReadExt for T {}
 pub trait BufReadSeekExt: BufRead + Seek {
     /// Read a string with a maximum length that might be terminated early with a null byte.
     /// Always makes sure the cursor ends up at `current + length` as if `length` bytes were always read
-    fn read_null_padded_string(&mut self, length: usize) -> GenericResult<CString> {
+    fn read_null_padded_cstring(&mut self, length: usize) -> GenericResult<CString> {
         let mut buf = vec![];
         let read = self.read_until(0, &mut buf)?;
         // Ensure there's always a null byte
@@ -66,6 +75,13 @@ pub trait BufReadSeekExt: BufRead + Seek {
         }
         self.seek_relative((length - read) as i64)?;
         Ok(CString::from_vec_with_nul(buf)?)
+    }
+
+    fn read_null_padded_string(&mut self, length: usize) -> GenericResult<String> {
+        Ok(self
+            .read_null_padded_cstring(length)?
+            .to_string_lossy()
+            .into())
     }
 }
 
