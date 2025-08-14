@@ -4,11 +4,15 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use serde::Serialize;
+#[cfg(feature = "tsify")]
+use tsify::Tsify;
+
+use serde::{Deserialize, Serialize};
 
 use crate::{bits::PickBit, read::read_utf16_name};
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi, from_wasm_abi))]
 pub struct MiiData {
     pub copying_allowed: bool,
     pub region_lock: MiiRegionLock,
@@ -287,7 +291,8 @@ impl MiiData {
 macro_rules! n_enum {
     ($name: ident; $($i: ident = $n: expr),*) => {
         #[repr(u8)]
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+        #[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi, from_wasm_abi))]
         pub enum $name {
             $($i = $n,)*
         }
@@ -322,7 +327,8 @@ n_enum!(
     Twn = 3
 );
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi, from_wasm_abi))]
 pub struct MiiPosition {
     pub page: u8,
     pub slot: u8,
@@ -342,7 +348,8 @@ n_enum!(
     Female = 1
 );
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi, from_wasm_abi))]
 pub struct MiiBirthday {
     pub month: chrono::Month,
     pub day: u8,
@@ -365,7 +372,8 @@ n_enum!(
 );
 
 /// Mii character features (facial features, etc)
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi, from_wasm_abi))]
 pub struct MiiFeatures {
     pub width: u8,
     pub height: u8,
