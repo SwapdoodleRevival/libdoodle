@@ -32,11 +32,7 @@ impl Colors {
 }
 
 fn full_rgb_value(nibble: u8) -> u8 {
-    let full = nibble << 4 | 0x0F;
-    if full == 0x0F {
-        return 0;
-    }
-    full
+    nibble << 4 | nibble
 }
 
 impl Color {
