@@ -20,41 +20,54 @@ pub enum SheetEventData {
         thick_pen: bool,
         color_index: u8,
     },
-    StickerEvent {
+    GameIconEvent {
         sticker_index: u8,
         rotation: u8,
-        is_mii: bool,
-        is_badge: bool,
-        facial_expression: u8, // should be 0 if is_mii == false
+    },
+    BadgeEvent {
+        sticker_index: u8,
+        rotation: u8,
+    },
+    MiiEvent {
+        sticker_index: u8,
+        rotation: u8,
+        facial_expression: u8,
     },
     PhotoEvent,
     Unknown {
-        event_type: u8,
+        stroke_type: u8,
     },
 }
 
 impl SheetEventData {
     fn from_bytes(bytes: [u8; 4]) -> Self {
-        if !bytes[0].pick_bit(3) {
+        let kind = bytes[0].pick_bits(0..=3);
+        if kind == 0 {
             return Self::PaintEvent {
                 continue_to_next: bytes[2].pick_bit(6),
                 color_index: bytes[3].pick_bits(0..=2),
                 thick_pen: bytes[3].pick_bit(3),
             };
-        } else if bytes[0].pick_bit(2) {
-            return Self::StickerEvent {
+        } else if kind == 12 {
+            return Self::GameIconEvent {
+                sticker_index: (bytes[2].pick_bits(7..=7) << 1) | bytes[2].pick_bits(6..=6),
+                rotation: bytes[3].pick_bits(4..=7),
+            };
+        } else if kind == 13 {
+            return Self::BadgeEvent {
+                sticker_index: (bytes[2].pick_bits(7..=7) << 1) | bytes[2].pick_bits(6..=6),
+                rotation: bytes[3].pick_bits(4..=7),
+            };
+        } else if kind == 14 {
+            return Self::MiiEvent {
                 sticker_index: bytes[2].pick_bits(6..=7),
                 rotation: bytes[3].pick_bits(4..=7),
-                is_mii: bytes[0].pick_bit(1),
-                is_badge: bytes[0].pick_bit(3),
                 facial_expression: bytes[3].pick_bits(0..=3),
             };
-        } else if bytes[0].pick_bit(3) {
+        } else if kind == 9 {
             return Self::PhotoEvent;
         }
-        return Self::Unknown {
-            event_type: !bytes[0].pick_bits(0..=3),
-        };
+        Self::Unknown { stroke_type: kind }
     }
 }
 
