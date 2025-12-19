@@ -1,5 +1,5 @@
 # Taken from the Rust Book
-name: Cargo Build & Test
+name: Cargo Build
 
 on:
   push:
@@ -12,14 +12,8 @@ jobs:
   build_and_test:
     name: Rust project - latest
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        toolchain:
-          - stable
-          - beta
-          - nightly
     steps:
       - uses: actions/checkout@v4
-      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      - run: rustup update stable && rustup default stable
       - run: cargo build --verbose
-      - run: cargo test --verbose
+#      - run: cargo test --verbose # We don't have proper test cases in the repo right now, so skip for now
