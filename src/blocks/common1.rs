@@ -1,9 +1,12 @@
 use serde::Serialize;
 use std::io;
+#[cfg(feature = "tsify")]
+use tsify::Tsify;
 
 use crate::read::ReadExt;
 
 #[derive(Debug, Serialize)]
+#[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi))]
 pub struct CommonInfo {
     pub note_id: u64,
     pub reply_to_note_id: u64,
@@ -12,6 +15,7 @@ pub struct CommonInfo {
 }
 
 #[derive(Debug, Serialize)]
+#[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi))]
 pub struct BasicDateTime {
     pub year: u8,
     pub month: u8,
