@@ -16,4 +16,5 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup update stable && rustup default stable
       - run: cargo build --verbose
+      - run: cargo build --verbose --features wasm
 #      - run: cargo test --verbose # We don't have proper test cases in the repo right now, so skip for now
