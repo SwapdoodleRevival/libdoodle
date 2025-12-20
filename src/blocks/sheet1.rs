@@ -3,13 +3,20 @@ use std::io::{Cursor, Error as IoError};
 #[cfg(feature = "tsify")]
 use tsify::Tsify;
 
-use crate::{bits::PickBit, read::ReadExt};
+use crate::{bits::PickBit, error::GenericResult, read::ReadExt};
 
 #[derive(Debug, Serialize)]
 #[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi))]
 pub struct Sheet {
     pub events: Vec<SheetEvent>,
     pub secret_page: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[cfg_attr(feature = "tsify", derive(Tsify), tsify(into_wasm_abi))]
+pub struct Sticker {
+    index: u8,
+    rotation: u8,
 }
 
 #[derive(Debug, Serialize)]
@@ -21,16 +28,13 @@ pub enum SheetEventData {
         color_index: u8,
     },
     GameIconEvent {
-        sticker_index: u8,
-        rotation: u8,
+        sticker_data: Sticker,
     },
     BadgeEvent {
-        sticker_index: u8,
-        rotation: u8,
+        sticker_data: Sticker,
     },
     MiiEvent {
-        sticker_index: u8,
-        rotation: u8,
+        sticker_data: Sticker,
         facial_expression: u8,
     },
     PhotoEvent,
@@ -41,33 +45,36 @@ pub enum SheetEventData {
 
 impl SheetEventData {
     fn from_bytes(bytes: [u8; 4]) -> Self {
-        let kind = bytes[0].pick_bits(0..=3);
-        if kind == 0 {
-            return Self::PaintEvent {
+        return match (bytes[0].pick_bits(0..=3)) {
+            0 => Self::PaintEvent {
                 continue_to_next: bytes[2].pick_bit(6),
                 color_index: bytes[3].pick_bits(0..=2),
                 thick_pen: bytes[3].pick_bit(3),
-            };
-        } else if kind == 12 {
-            return Self::GameIconEvent {
-                sticker_index: (bytes[2].pick_bits(7..=7) << 1) | bytes[2].pick_bits(6..=6),
-                rotation: bytes[3].pick_bits(4..=7),
-            };
-        } else if kind == 13 {
-            return Self::BadgeEvent {
-                sticker_index: (bytes[2].pick_bits(7..=7) << 1) | bytes[2].pick_bits(6..=6),
-                rotation: bytes[3].pick_bits(4..=7),
-            };
-        } else if kind == 14 {
-            return Self::MiiEvent {
-                sticker_index: bytes[2].pick_bits(6..=7),
-                rotation: bytes[3].pick_bits(4..=7),
+            },
+            12 => Self::GameIconEvent {
+                sticker_data: Sticker {
+                    index: (bytes[2].pick_bits(7..=7) << 1) | bytes[2].pick_bits(6..=6),
+                    rotation: bytes[3].pick_bits(4..=7),
+                },
+            },
+            13 => Self::BadgeEvent {
+                sticker_data: Sticker {
+                    index: (bytes[2].pick_bits(7..=7) << 1) | bytes[2].pick_bits(6..=6),
+                    rotation: bytes[3].pick_bits(4..=7),
+                },
+            },
+            14 => Self::MiiEvent {
+                sticker_data: Sticker {
+                    index: bytes[2].pick_bits(6..=7),
+                    rotation: bytes[3].pick_bits(4..=7),
+                },
                 facial_expression: bytes[3].pick_bits(0..=3),
-            };
-        } else if kind == 9 {
-            return Self::PhotoEvent;
-        }
-        Self::Unknown { stroke_type: kind }
+            },
+            9 => Self::PhotoEvent,
+            unknown_kind => Self::Unknown {
+                stroke_type: unknown_kind,
+            },
+        };
     }
 }
 
@@ -105,19 +112,15 @@ impl TryFrom<&[u8]> for Sheet {
         reader.read_u32_le()?; // seems to be constant
         let num_blocks = reader.read_u32_le()?;
 
-        let mut sheet: Sheet = Sheet {
-            events: vec![],
-            secret_page: reader.read_const_num_of_bytes::<1>()?[0] != 0,
-        };
+        let secret_page: bool = reader.read_const_num_of_bytes::<1>()?[0] != 0;
 
         reader.set_position(0x40);
 
-        for _ in 0..num_blocks {
-            sheet
-                .events
-                .push(SheetEvent::from_bytes(reader.read_const_num_of_bytes()?));
-        }
-
-        Ok(sheet)
+        Ok(Sheet {
+            events: (0..num_blocks)
+                .map(|_| reader.read_const_num_of_bytes().map(SheetEvent::from_bytes))
+                .collect::<Result<Vec<_>, _>>()?,
+            secret_page: secret_page,
+        })
     }
 }
