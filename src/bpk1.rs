@@ -33,18 +33,6 @@ pub struct BPK1Block {
     pub data: Vec<u8>,
 }
 
-/**
- Size of the Block header, aka 0x14.
-
- It contains, in order:
- - 4 bytes offset within the file
- - 4 bytes for the size of the block
- - 4 bytes for the checksum
- - 8 bytes for the block name
-*/
-const BPK1_BLOCK_HEADER_SIZE: usize = 0x4 + 0x4 + 0x4 + 0x8;
-const BPK1_BLOCK_NAME_MAX_LENGTH: u32 = 7;
-
 /** The custom CRC32 algorithm used in BPK1. */
 const BPK1_CRC32_ALG: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::Algorithm {
     width: 32,
@@ -102,7 +90,8 @@ where
 
         reader.seek_relative(4)?;
         let num_blocks = reader.read_u32_le()?;
-        reader.seek_relative(0x38)?;
+        let block_name_len = reader.read_u32_le()? as usize + 1;
+        reader.seek_relative(0x34)?;
 
         struct BlockHeader {
             offset: u32,
@@ -118,7 +107,7 @@ where
                 offset: reader.read_u32_le()?,
                 size: reader.read_u32_le()?,
                 checksum: reader.read_u32_le()?,
-                name: reader.read_null_padded_cstring(8)?,
+                name: reader.read_null_padded_cstring(block_name_len)?,
             })
         }
 
@@ -153,9 +142,15 @@ where
         let mut result = Vec::<u8>::new();
         let mut writer = Cursor::new(&mut result);
 
+        let max_name_len = blocks
+            .iter()
+            .map(|block| block.name.count_bytes())
+            .max()
+            .unwrap_or(0);
+
         writer.write_all(b"BPK1")?;
         writer.write_u32_le(blocks.len() as u32)?;
-        writer.write_u32_le(BPK1_BLOCK_NAME_MAX_LENGTH)?;
+        writer.write_u32_le(max_name_len as u32)?;
 
         let file_size_pos = writer.position();
         writer.write_u32_le(0)?; // file size
@@ -169,8 +164,11 @@ where
             writer.write_u32_le(0)?; // will be offset
             writer.write_u32_le(block.data.len() as u32)?;
             writer.write_u32_le(calc_bpk1_checksum(&block.data))?;
-            writer.write_all(&cstring_to_bpk1_bytes(&block.name))?;
+            writer.write_all(&cstring_to_bpk1_bytes(&block.name, max_name_len + 1))?;
         }
+
+        // u32 + u32 + u32 + max_name_len+1 (see above)
+        let block_header_total_size: usize = 0x4 + 0x4 + 0x4 + max_name_len + 1;
 
         let header_size = writer.position() - header_start_pos;
 
@@ -190,7 +188,7 @@ where
                 end_position += 0x04 - pad;
             }
 
-            writer.set_position(header_start_pos + (index * BPK1_BLOCK_HEADER_SIZE) as u64);
+            writer.set_position(header_start_pos + (index * block_header_total_size) as u64);
             writer.write_u32_le(start_position as u32)?;
             writer.set_position(end_position);
         }
@@ -206,9 +204,9 @@ where
     fn new_from_bpk1_blocks(blocks: Vec<BPK1Block>) -> GenericResult<Self>;
 }
 
-fn cstring_to_bpk1_bytes(string: &CString) -> [u8; 8] {
-    let mut bytes = [0u8; 8];
-    _ = bytes.as_mut().write(string.to_bytes());
+fn cstring_to_bpk1_bytes(string: &CString, length: usize) -> Vec<u8> {
+    let mut bytes: Vec<u8> = vec![0; length];
+    _ = bytes.as_mut_slice().write(string.to_bytes());
     bytes
 }
 
