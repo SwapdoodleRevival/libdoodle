@@ -33,17 +33,6 @@ pub struct BPK1Block {
     pub data: Vec<u8>,
 }
 
-/**
- Size of the Block header, aka 0x14.
-
- It contains, in order:
- - 4 bytes offset within the file
- - 4 bytes for the size of the block
- - 4 bytes for the checksum
- - 8 bytes for the block name
-*/
-const BPK1_BLOCK_HEADER_SIZE: usize = 0x4 + 0x4 + 0x4 + 0x8;
-
 /** The custom CRC32 algorithm used in BPK1. */
 const BPK1_CRC32_ALG: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::Algorithm {
     width: 32,
@@ -178,6 +167,9 @@ where
             writer.write_all(&cstring_to_bpk1_bytes(&block.name, max_name_len + 1))?;
         }
 
+        // u32 + u32 + u32 + max_name_len+1 (see above)
+        let block_header_total_size: usize = 0x4 + 0x4 + 0x4 + max_name_len + 1;
+
         let header_size = writer.position() - header_start_pos;
 
         let pad = header_size % 0x10;
@@ -196,7 +188,7 @@ where
                 end_position += 0x04 - pad;
             }
 
-            writer.set_position(header_start_pos + (index * BPK1_BLOCK_HEADER_SIZE) as u64);
+            writer.set_position(header_start_pos + (index * block_header_total_size) as u64);
             writer.write_u32_le(start_position as u32)?;
             writer.set_position(end_position);
         }
