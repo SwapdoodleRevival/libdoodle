@@ -1,8 +1,5 @@
 use std::{
-    error::Error,
-    ffi::CString,
-    fmt::Display,
-    io::{BufRead, Cursor, Seek, SeekFrom, Write},
+    borrow::Borrow, error::Error, ffi::CString, fmt::Display, io::{BufRead, Cursor, Seek, SeekFrom, Write}
 };
 
 use serde::{Deserialize, Serialize};
@@ -138,13 +135,13 @@ where
         Self::new_from_bpk1_blocks(blocks)
     }
 
-    fn bytes_from_bpk1_blocks(blocks: Vec<BPK1Block>) -> GenericResult<Vec<u8>> {
+    fn bytes_from_bpk1_blocks<P: Borrow<BPK1Block>>(blocks: &[P]) -> GenericResult<Vec<u8>> {
         let mut result = Vec::<u8>::new();
         let mut writer = Cursor::new(&mut result);
 
         let max_name_len = blocks
             .iter()
-            .map(|block| block.name.count_bytes())
+            .map(|block| block.borrow().name.count_bytes())
             .max()
             .unwrap_or(0);
 
@@ -160,11 +157,11 @@ where
 
         let header_start_pos = writer.position();
 
-        for block in &blocks {
+        for block in blocks {
             writer.write_u32_le(0)?; // will be offset
-            writer.write_u32_le(block.data.len() as u32)?;
-            writer.write_u32_le(calc_bpk1_checksum(&block.data))?;
-            writer.write_all(&cstring_to_bpk1_bytes(&block.name, max_name_len + 1))?;
+            writer.write_u32_le(block.borrow().data.len() as u32)?;
+            writer.write_u32_le(calc_bpk1_checksum(&block.borrow().data))?;
+            writer.write_all(&cstring_to_bpk1_bytes(&block.borrow().name, max_name_len + 1))?;
         }
 
         // u32 + u32 + u32 + max_name_len+1 (see above)
@@ -181,7 +178,7 @@ where
 
         for (index, block) in blocks.iter().enumerate() {
             let start_position = writer.position();
-            writer.write_all(&block.data)?;
+            writer.write_all(&block.borrow().data)?;
             let mut end_position = writer.position();
             let pad = end_position % 0x4;
             if pad != 0 {
@@ -245,7 +242,7 @@ pub mod tests {
         .unwrap();
 
         let blocks = BPK1Blocks::new_from_bpk1_bytes(&decompressed).unwrap();
-        let rebuilt = BPK1Blocks::bytes_from_bpk1_blocks(blocks).unwrap();
+        let rebuilt = BPK1Blocks::bytes_from_bpk1_blocks(&blocks).unwrap();
         write("test_cases/test-seri-deseri-rebuilt.bpk", &rebuilt).unwrap();
 
         if decompressed != rebuilt {
