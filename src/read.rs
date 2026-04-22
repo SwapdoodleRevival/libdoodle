@@ -42,7 +42,7 @@ pub trait ReadExt: Read {
     /// Always makes sure the cursor ends up at `current + length` as if `length` bytes were always read
     fn read_null_padded_cstring(&mut self, length: usize) -> GenericResult<CString> {
         let mut buf = self.read_num_of_bytes(length)?;
-        if buf.iter().find(|k| **k == 0).is_none() {
+        if !buf.contains(&0) {
             buf.push(0);
         }
         Ok(CString::from_vec_with_nul(buf)?)
