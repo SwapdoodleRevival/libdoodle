@@ -37,6 +37,23 @@ pub trait ReadExt: Read {
     fn read_u64_le(&mut self) -> io::Result<u64> {
         Ok(u64::from_le_bytes(self.read_const_num_of_bytes()?))
     }
+
+    /// Read a string with a maximum length that might be terminated early with a null byte.
+    /// Always makes sure the cursor ends up at `current + length` as if `length` bytes were always read
+    fn read_null_padded_cstring(&mut self, length: usize) -> GenericResult<CString> {
+        let mut buf = self.read_num_of_bytes(length)?;
+        if !buf.contains(&0) {
+            buf.push(0);
+        }
+        Ok(CString::from_vec_with_nul(buf)?)
+    }
+
+    fn read_null_padded_string(&mut self, length: usize) -> GenericResult<String> {
+        Ok(self
+            .read_null_padded_cstring(length)?
+            .to_string_lossy()
+            .into())
+    }
 }
 
 pub fn read_utf16_name<const N: usize>(bytes: [u8; N]) -> String {
@@ -64,24 +81,12 @@ impl<T: BufRead> BufReadExt for T {}
 
 /// An extension for [std::io::BufRead] + [std::io::Seek] that does the allocations for you
 pub trait BufReadSeekExt: BufRead + Seek {
-    /// Read a string with a maximum length that might be terminated early with a null byte.
-    /// Always makes sure the cursor ends up at `current + length` as if `length` bytes were always read
-    fn read_null_padded_cstring(&mut self, length: usize) -> GenericResult<CString> {
-        let mut buf = vec![];
-        let read = self.read_until(0, &mut buf)?;
-        // Ensure there's always a null byte
-        if !buf.ends_with(&[0]) {
-            buf.push(0);
+    fn seek_relative_to_nearest_multiple(&mut self, mul: usize) -> GenericResult<()> {
+        let pad = (self.stream_position()? as usize) % mul;
+        if pad != 0 {
+            self.seek_relative((mul - pad).try_into()?)?;
         }
-        self.seek_relative((length - read) as i64)?;
-        Ok(CString::from_vec_with_nul(buf)?)
-    }
-
-    fn read_null_padded_string(&mut self, length: usize) -> GenericResult<String> {
-        Ok(self
-            .read_null_padded_cstring(length)?
-            .to_string_lossy()
-            .into())
+        Ok(())
     }
 }
 

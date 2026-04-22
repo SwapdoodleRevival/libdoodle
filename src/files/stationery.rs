@@ -4,7 +4,7 @@ use std::{error::Error, fmt::Display, io::Cursor};
 use crate::bits::PickBit;
 use crate::bpk1::{BPK1Block, BPK1Blocks, BPK1File};
 use crate::error::GenericResult;
-use crate::read::BufReadSeekExt;
+use crate::read::ReadExt;
 #[cfg(feature = "tsify")]
 use tsify::Tsify;
 
