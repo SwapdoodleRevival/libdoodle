@@ -1,5 +1,9 @@
 use std::{
-    borrow::Borrow, error::Error, ffi::CString, fmt::Display, io::{BufRead, Cursor, Seek, SeekFrom, Write}
+    borrow::Borrow,
+    error::Error,
+    ffi::CString,
+    fmt::Display,
+    io::{BufRead, Cursor, Seek, SeekFrom, Write},
 };
 
 use serde::{Deserialize, Serialize};
@@ -87,7 +91,7 @@ where
 
         reader.seek_relative(4)?;
         let num_blocks = reader.read_u32_le()?;
-        let block_name_len = reader.read_u32_le()? as usize + 1;
+        let block_name_len = reader.read_u32_le()? as usize;
         reader.seek_relative(0x34)?;
 
         struct BlockHeader {
@@ -101,11 +105,12 @@ where
 
         for _ in 0..num_blocks {
             blocks.push(BlockHeader {
-                offset: reader.read_u32_le()?,
-                size: reader.read_u32_le()?,
-                checksum: reader.read_u32_le()?,
-                name: reader.read_null_padded_cstring(block_name_len)?,
-            })
+                offset: reader.read_u32_le().unwrap(),
+                size: reader.read_u32_le().unwrap(),
+                checksum: reader.read_u32_le().unwrap(),
+                name: reader.read_null_padded_cstring(block_name_len).unwrap(),
+            });
+            reader.seek_relative_to_nearest_multiple(0x4).unwrap();
         }
 
         // Turn the headers into contentful blocks
@@ -155,37 +160,27 @@ where
 
         writer.write_all(&[0; 0x2c])?; // padding
 
-        let header_start_pos = writer.position();
+        let mut positions = vec![0; blocks.len()];
 
-        for block in blocks {
+        for (index, block) in blocks.iter().enumerate() {
+            positions[index] = writer.position();
             writer.write_u32_le(0)?; // will be offset
             writer.write_u32_le(block.borrow().data.len() as u32)?;
             writer.write_u32_le(calc_bpk1_checksum(&block.borrow().data))?;
-            writer.write_all(&cstring_to_bpk1_bytes(&block.borrow().name, max_name_len + 1))?;
+            writer.write_all(&cstring_to_bpk1_bytes(&block.borrow().name, max_name_len))?;
+            writer.seek_relative_to_nearest_multiple(0x4)?;
         }
 
-        // u32 + u32 + u32 + max_name_len+1 (see above)
-        let block_header_total_size: usize = 0x4 + 0x4 + 0x4 + max_name_len + 1;
-
-        let header_size = writer.position() - header_start_pos;
-
-        let pad = header_size % 0x10;
-        if pad != 0 {
-            writer.write_zeroes((0x10 - pad) as usize)?; // padding
-        }
+        writer.seek_relative_to_nearest_multiple(0x10)?;
 
         let data_start_pos = writer.position();
 
         for (index, block) in blocks.iter().enumerate() {
             let start_position = writer.position();
             writer.write_all(&block.borrow().data)?;
-            let mut end_position = writer.position();
-            let pad = end_position % 0x4;
-            if pad != 0 {
-                end_position += 0x04 - pad;
-            }
-
-            writer.set_position(header_start_pos + (index * block_header_total_size) as u64);
+            writer.seek_relative_to_nearest_multiple(0x4)?;
+            let end_position = writer.position();
+            writer.set_position(positions[index]);
             writer.write_u32_le(start_position as u32)?;
             writer.set_position(end_position);
         }
@@ -246,7 +241,7 @@ pub mod tests {
         write("test_cases/test-seri-deseri-rebuilt.bpk", &rebuilt).unwrap();
 
         if decompressed != rebuilt {
-            panic!();
+            panic!("files do not match");
         }
     }
 }
