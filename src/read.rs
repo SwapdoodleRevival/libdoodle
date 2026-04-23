@@ -1,5 +1,5 @@
 use std::{
-    ffi::CString,
+    ffi::{CStr, CString},
     io::{self, BufRead, Read, Seek},
 };
 
@@ -45,7 +45,7 @@ pub trait ReadExt: Read {
         if !buf.contains(&0) {
             buf.push(0);
         }
-        Ok(CString::from_vec_with_nul(buf)?)
+        Ok(CStr::from_bytes_until_nul(&buf)?.into())
     }
 
     fn read_null_padded_string(&mut self, length: usize) -> GenericResult<String> {
